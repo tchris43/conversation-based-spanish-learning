@@ -1,0 +1,46 @@
+{
+  "strengths": [
+    {
+      "label": "Duration understanding",
+      "count": 1,
+      "last_evidence": "The user was able to respond with 'sinco months'.",
+      "evidence_history": [
+        "The user was able to respond with 'sinco months'."
+      ]
+    },
+    {
+      "label": "Interés en la cocina",
+      "count": 1,
+      "last_evidence": "El usuario mencionó que le gusta cocinar.",
+      "evidence_history": [
+        "El usuario mencionó que le gusta cocinar."
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "label": "Comprensión oral",
+      "count": 1,
+      "last_evidence": "El usuario no entiende la palabra 'qué'.",
+      "evidence_history": [
+        "El usuario no entiende la palabra 'qué'."
+      ]
+    },
+    {
+      "label": "Vocabulario",
+      "count": 1,
+      "last_evidence": "El usuario no entiende la palabra 'indicar'.",
+      "evidence_history": [
+        "El usuario no entiende la palabra 'indicar'."
+      ]
+    },
+    {
+      "label": "Comprensión de preguntas",
+      "count": 1,
+      "last_evidence": "El usuario respondió con 'end sessiono'.",
+      "evidence_history": [
+        "El usuario respondió con 'end sessiono'."
+      ]
+    }
+  ]
+}

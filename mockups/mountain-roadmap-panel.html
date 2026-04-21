@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mountain Roadmap With Panel</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --paper: #fffdf9;
+      --ink: #1f1916;
+      --muted: #6a635d;
+      --line: #dcd1c4;
+      --accent: #b45231;
+      --gold: #d79e45;
+      --soft: #f3ece2;
+      --shadow: 0 18px 44px rgba(24, 17, 13, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(180deg, #fcfaf5 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 28px 34px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      letter-spacing: 0.18rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .mountain-card,
+    .panel {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(220, 209, 196, 0.9);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .mountain-card {
+      padding: 24px;
+      min-height: 760px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mountain-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 52% 14%, rgba(215,158,69,0.09), transparent 18%);
+      pointer-events: none;
+    }
+
+    .mountain-wrap {
+      position: relative;
+      width: 100%;
+      height: 710px;
+    }
+
+    .marker {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: default;
+    }
+
+    .node {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid var(--accent);
+      box-shadow: 0 0 0 6px rgba(180, 82, 49, 0.1);
+    }
+
+    .node.current {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 0 8px rgba(215,158,69,0.16);
+    }
+
+    .node.locked {
+      background: #d8d1ca;
+      border-color: #bcb2a8;
+      box-shadow: none;
+    }
+
+    .tiny-label {
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--line);
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .panel {
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .eyebrow {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14rem;
+      color: var(--muted);
+      margin: 0 0 8px;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card {
+      background: var(--soft);
+      border: 1px solid rgba(220, 209, 196, 0.85);
+      border-radius: 22px;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .words {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .word {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: white;
+      border: 1px solid rgba(220, 209, 196, 0.95);
+      font-size: 0.85rem;
+    }
+
+    .button {
+      border: none;
+      border-radius: 999px;
+      padding: 14px 18px;
+      background: linear-gradient(180deg, #bf5b37 0%, #a34729 100%);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    @media (max-width: 1060px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .mountain-card {
+        min-height: 620px;
+      }
+      .mountain-wrap {
+        height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="header">
+      <div class="logo">Camino</div>
+      <div class="chips">
+        <div class="chip">Taylor</div>
+        <div class="chip">Neighbors</div>
+        <div class="chip">4 words due today</div>
+      </div>
+    </div>
+
+    <section class="layout">
+      <div class="mountain-card">
+        <div class="mountain-wrap">
+          <svg viewBox="0 0 1200 760" width="100%" height="100%" aria-hidden="true">
+            <defs>
+              <linearGradient id="leftFace" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#8a847e" />
+                <stop offset="100%" stop-color="#69635d" />
+              </linearGradient>
+              <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#59534e" />
+                <stop offset="100%" stop-color="#3f3a36" />
+              </linearGradient>
+            </defs>
+            <path d="M140 660 L520 170 L720 455 L900 255 L1080 660 Z" fill="url(#rightFace)" />
+            <path d="M140 660 L520 170 L615 660 Z" fill="url(#leftFace)" />
+            <path d="M520 170 L580 280 L548 280 Z" fill="#fbf7ef" />
+            <path d="M188 650
+                     C 260 612, 298 566, 362 538
+                     C 428 510, 478 470, 522 420
+                     C 562 374, 622 356, 694 366
+                     C 770 376, 832 338, 894 286"
+                  fill="none"
+                  stroke="#f4ecdd"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round" />
+          </svg>
+
+          <div class="marker" style="left: 24%; top: 77%;">
+            <div class="node"></div>
+            <div class="tiny-label">Hola vecino</div>
+          </div>
+          <div class="marker" style="left: 40%; top: 63%;">
+            <div class="node current"></div>
+            <div class="tiny-label">Vida diaria</div>
+          </div>
+          <div class="marker" style="left: 53%; top: 49%;">
+            <div class="node"></div>
+            <div class="tiny-label">Invitaciones</div>
+          </div>
+          <div class="marker" style="left: 67%; top: 38%;">
+            <div class="node locked"></div>
+            <div class="tiny-label">Problemas</div>
+          </div>
+          <div class="marker" style="left: 77%; top: 25%;">
+            <div class="node locked"></div>
+            <div class="tiny-label">Comodidad</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div>
+          <div class="eyebrow">Selected module</div>
+          <h2>Vida diaria</h2>
+        </div>
+
+        <p>
+          Practice talking about what you do at home, what you enjoy, and basic neighborhood life
+          in short natural exchanges.
+        </p>
+
+        <div class="card">
+          <div class="eyebrow">Today's words</div>
+          <div class="words">
+            <span class="word">vecino</span>
+            <span class="word">cocinar</span>
+            <span class="word">calle</span>
+            <span class="word">tiempo</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="eyebrow">Success looks like</div>
+          <p>Give simple but confident answers and ask one natural follow-up question.</p>
+        </div>
+
+        <button class="button">Start Module</button>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

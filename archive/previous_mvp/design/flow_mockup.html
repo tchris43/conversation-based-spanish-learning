@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spanish Tutor Flow Sketch</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f4f6fb;
+      color: #1f2933;
+      margin: 0;
+      padding: 32px;
+    }
+    .stage {
+      border-radius: 16px;
+      background: #fff;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.09);
+    }
+    .stage h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #111827;
+    }
+    .panel {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .panel div {
+      flex: 1 1 240px;
+      background: #eef2ff;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #c7d2fe;
+    }
+    .panel strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #4338ca;
+    }
+    .arrow {
+      text-align: center;
+      color: #475569;
+      font-size: 26px;
+    }
+    .log {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .log-item {
+      background: #e0e7ff;
+      border-radius: 10px;
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <h2>1. Onboarding Form (first visit)</h2>
+    <div class="panel">
+      <div>
+        <strong>Inputs</strong>
+        <p>Goal, topic preference, weekly time, self-rating.</p>
+      </div>
+      <div>
+        <strong>Outputs</strong>
+        <p>Seeded profile (local storage) plus confirmation prompt.</p>
+      </div>
+      <div>
+        <strong>Questions</strong>
+        <p>
+          Required fields? Confirmation path? Should onboarding summary log?
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <div class="stage">
+    <h2>2. Practice Loop</h2>
+    <div class="panel">
+      <div>
+        <strong>Scheduler</strong>
+        <p>
+          Runs spaced-review algorithm, returns prioritized review set + new item.
+        </p>
+      </div>
+      <div>
+        <strong>Prompt</strong>
+        <p>
+          Current topic, goals, review/new items, learner message, inline guidance.
+        </p>
+      </div>
+      <div>
+        <strong>LLM Response</strong>
+        <p>
+          Correction, rationale, next action in structured JSON (“Correction”, “Rationale”, “Nextt”).
+        </p>
+      </div>
+      <div>
+        <strong>Updates</strong>
+        <p>
+          Update exposures/correctness, store “needs work” evidence + rationale, refresh scheduler metadata.
+        </p>
+      </div>
+      <div>
+        <strong>Inline Hint</strong>
+        <p>
+          Display correction cue, keep conversation flowing, do not block user input.
+        </p>
+      </div>
+      <div>
+        <strong>Fallback</strong>
+        <p>
+          If rationale fails heuristic, trigger clarification prompt (“cite the turn”).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <div class="stage">
+    <h2>3. Logs & Diagnostics</h2>
+    <p>
+      Collapsible sidebar surfaces prompt/response pairs, “needs work” insights, and evidence.
+      Read-only during MVP, aggregated for future drills.
+    </p>
+    <div class="log">
+      <div class="log-item">
+        <strong>Prompt</strong>
+        <p>Topic + profile summary + latest user message.</p>
+      </div>
+      <div class="log-item">
+        <strong>LLM</strong>
+        <p>Structured JSON (Correction/Rationale/Nextt) + timing.</p>
+      </div>
+      <div class="log-item">
+        <strong>Needs Work</strong>
+        <p>Evidence phrase, rationale, timestamp, status.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <h2>Control Flow Questions</h2>
+    <ul>
+      <li>When does the scheduler run vs. when do we hit the LLM?</li>
+      <li>How do we surface inline hints without blocking the next turn?</li>
+      <li>What triggers the “cite the turn” clarification and how often?</li>
+      <li>How are logs grouped and filtered in the sidebar?</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+# Architecture
+
+## Chatbot Flow
+- The app starts in an onboarding phase driven by `basic_mvp/prompts/onboarding.md`. The onboarding agent asks goal questions until it returns JSON containing `ready_for_scenario`, `scenario`, `goal_summary`, `best_guess_level`, and `time_constraint`.
+- For faster prompt iteration, `DEBUG_SKIP_ONBOARDING=1` seeds the app directly into conversation mode with a preset beginner-neighbor scenario, goal summary, and baseline level from `basic_mvp/config.py`.
+- When onboarding is ready, the app stores the `scenario` in state and starts the assessment conversation fresh (onboarding messages are not sent as model context for the assessment).
+- The main handoff artifacts are explicit in code: `onboarding_result` carries the scenario handoff plus the onboarding baseline level guess, `conversation_request` carries the main conversation payload, and `tool_calls` carries any tool decisions extracted from the completed model response.
+- `basic_mvp/app.py` is now the flow file: it owns the phase handlers, tool handoffs, router, and Gradio wiring. Support code was moved into `basic_mvp/config.py`, `basic_mvp/prompts.py`, `basic_mvp/normalize.py`, `basic_mvp/model_calls.py`, and `basic_mvp/tools.py` so the runtime path is easier to trace.
+- The system prompt is loaded from `basic_mvp/prompts/conversation.md` on each request so prompt iteration does not require restarting the app.
+- Conclude now has its own prompt at `basic_mvp/prompts/conclude_assessment.md`. When the model calls `conclude`, the app runs a final assessment LLM call over the session transcript plus learner context to synthesize strengths, gaps, where the learner stands relative to their goal, and the next focus.
+- After the conclude assessment call, the app runs a second planning call using `basic_mvp/prompts/gameplan.md`. That call takes the learner goal, time constraint, assessment result, and `state_summary`, and returns a roadmap summary, a list of modules, and a spaced-review seed.
+- If onboarding did not provide a usable `time_constraint`, conclude does not generate the roadmap immediately. Instead, the app switches into a short `planning` phase, asks the user how soon they want to meet the goal and how often they can work, then runs the roadmap generation after that answer arrives.
+- The conversation prompt also receives `best_guess_level` from onboarding as baseline context. This is only a starting guess for the roleplay assessment, not the final placement.
+- The conversation prompt receives two profile-driven context blocks on every turn: `state_summary` (persistent learner record loaded from disk) and `adjustment_state` (session-only guidance for whether to keep things easier or harder right now).
+- Each user message is combined with prior chat history to form a `messages` list.
+- `stream_model` in `basic_mvp/model_calls.py` wraps the OpenAI Responses API streaming call and yields partial answer updates as SSE events arrive.
+- `generate_tts_audio` in `basic_mvp/model_calls.py` wraps the Audio API TTS call and returns a full PCM audio payload after the assistant turn finishes.
+- The model can call a `correction` function tool; when it does, `basic_mvp/tools.py` runs a second LLM call with a correction-specific prompt loaded from `basic_mvp/prompts/correction.md`, then `basic_mvp/app.py` sends the tool output back to the model and streams the final reply. The tool accepts the learner message and may also receive the previous assistant message for context.
+- The model can call a `record_strength_gap` function tool during the assessment to record meaningful strengths/gaps. The app updates session `profile_state`, writes the same signal to per-user local storage, rebuilds `state_summary`, and updates `adjustment_state` so later turns can adapt without separate difficulty tools.
+- Persistent profile records are grouped by `label`. Repeated observations do not create duplicate labels; instead the app increments a `count`, stores `last_evidence`, and appends to `evidence_history` so future sessions can retain repeated evidence without fragmenting the roadmap.
+- The model can call a `conclude` function tool to end the assessment. The tool args are still `review_seed_words` and `next_focus`, but the app now treats those as fallback hints and runs a dedicated conclude-assessment LLM call to synthesize the final end-of-session summary from the transcript plus learner context.
+- `gameplan_state` and `spaced_review_state` are explicit Gradio states and both are user-scoped. `gameplan_state` is loaded/saved per user from disk, while `spaced_review_state` is refreshed from permanent disk state and includes the current session view (`todays_words`, seed words, progress).
+- Permanent spaced-review state now lives on disk in per-user files under `basic_mvp/data/users/<user_id>/spaced_review.json`, managed by `basic_mvp/spaced_review_store.py`.
+- The spaced-review scheduler is deterministic and separate from fuzzy model judgment: it handles due-word selection, seed-word merging, and outcome scheduling rules without calling the LLM.
+- Schedule rules for new words are: same day, next day, then 4, 8, 16, 32 days from first introduction, then continue doubling.
+- `consecutive_correct` is tracked per word and mastery is reached at 4 consecutive correct outcomes (no `correct_index` field).
+- On incorrect outcomes, `consecutive_correct` resets and the next due review is scheduled at half of the remaining time to the normal due date.
+- `spaced_review_state` now includes `todays_words`, which is refreshed from permanent state and intended to be injected into module-related model calls.
+- Module sessions now run in their own `module_session` phase instead of pretending to be an assessment continuation. `basic_mvp/chat_backend.py` wires `basic_mvp/prompts/session.md` into the session phase, injecting `todays_words`, `used_words`, and `learned_words` plus module metadata before each turn. The session prompt also sees the same `state_summary` block so it can refer to long-term learner strengths/gaps.
+- Module sessions use two new function tools: `record_word_outcome` updates spaced review deterministically and tracks `used_words`, while `conclude_session` triggers a closing prompt (`basic_mvp/prompts/conclude_session.md`) that summarizes new strengths/gaps, adds struggled words to spaced review, and resets the module state. The same chat endpoint handles both assessment and module sessions; the backend branches on `phase` instead of introducing another API.
+- `learned_words` is derived from the mastered entries in `basic_mvp/spaced_review_store.py` so it stays synchronized with spaced-review mastery without an additional persistence stream.
+- `assessment_state` is now an explicit Gradio state too. It stores the conclude assessment result just long enough for the planning phase to generate the roadmap when `time_constraint` was missing.
+- `basic_mvp/tools.py` now also contains a `run_module_generator(...)` helper. It is not wired to a Start button yet, but it is designed to take a module title/goal, learner standing, `state_summary`, `time_constraint`, and spaced-review status to generate the next roleplay scenario from `basic_mvp/prompts/module_generator.md`.
+- `run_module_generator(...)` now also accepts `todays_words` so module-context calls can inject the exact due-word array for the session.
+- The UI uses a minimal Gradio `Blocks` layout with a chat area and a single input.
+- The UI now also has an optional `Read replies aloud` checkbox and an audio output. A second Gradio step runs after each completed chat turn and synthesizes the latest assistant message into audio without reading the user's text aloud.
+- The UI includes local profile controls (`Profile` dropdown + `Create / Switch`) so the active learner can be changed without restarting the app.
+- The Gradio chat state is stored in message format using `{"role", "content"}` dictionaries so it matches the `Chatbot` component.
+- History items are mapped to Responses API content blocks (`input_text` for user/system, `output_text` for assistant).
+- Gradio message content is normalized to plain text before the OpenAI call because some Gradio versions return structured content blocks instead of raw strings, and some versions return tuple-pairs instead of `{\"role\",\"content\"}` dict messages.
+- The model is `gpt-4o-mini` for low-latency chat.
+- `router` in `basic_mvp/app.py` is a generator so Gradio can render the assistant reply incrementally during the stream.
+- `generate_latest_assistant_audio` is intentionally outside `router`; it runs as a follow-up UI step so audio playback does not complicate the main phase/state handoff tuples.
+- `user_id_state` is part of the same Gradio tuple flow as chat/phase state, so every routed turn and tool-persistence write is scoped to the selected user.
+- During onboarding, `router` still yields a single update per user message (it cannot only `return`, because the function contains streaming `yield`s in the conversation phase).
+- `build_onboarding_messages` and `build_conversation_messages` remain in `basic_mvp/app.py` because that is the explicit context handoff point between onboarding output and conversation input.
+- `stream_assistant_reply` throttles UI updates (time/character based) so Gradio does not rerender on every tiny delta; this makes streaming feel smoother.
+- Only the last 4 user/assistant turns (`MAX_TURN_PAIRS`) are sent each request to keep context small and latency stable.
+- Persistent learner history, spaced review, gameplan, and module progress now live under `basic_mvp/data/users/<user_id>/`.
+- Files are currently:
+- `profile.json`
+- `spaced_review.json`
+- `gameplan.json`
+- `module_progress.json`
+- `basic_mvp/user_store.py` maintains `users_index.json` and `last_active_user.txt` so profile names map to stable user ids (`taylor`, `taylor-2`, etc.) and the app remembers the most recently active user.
+- `DEFAULT_USER_ID` is now only a fallback bootstrap identity when no local user exists yet.
+- Legacy single-user files (`basic_mvp/data/profile.json`, `basic_mvp/data/spaced_review.json`) are used only as one-time migration fallback on first read.
+
+## Web Integration
+- The Gradio app still exists, but the new web path is now split into a lightweight Python API plus a separate Next.js frontend.
+- `basic_mvp/api_server.py` is a small FastAPI server that exposes user, roadmap, session, and chat endpoints. It is intentionally thin: it should route requests, normalize user identity, and hand work off to backend service functions rather than reimplementing chat logic.
+- The API server also exposes `/api/audio/latest`, which returns WAV audio for the most recent assistant message in the current user's session. This keeps web audio simple: the frontend does not synthesize speech itself, it just asks Python for the latest reply as browser-playable audio.
+- `basic_mvp/chat_backend.py` is the backend service layer for the web app. It mirrors the same core phases as the Gradio flow (`onboarding`, `conversation`, `planning`) but returns plain JSON-friendly session objects instead of Gradio tuples.
+- `basic_mvp/session_store.py` persists the current live chat/session state per user in `basic_mvp/data/users/<user_id>/session.json`. This is separate from profile, spaced review, and gameplan storage because it represents the current active interaction, not durable learner knowledge.
+- The Next.js UI is now a parallel frontend at the repo root. The important routes are:
+  - `/` is a smart entry: it renders the onboarding/assessment chat when the current user lacks modules and otherwise routes to `/roadmap`.
+  - `/roadmap` renders the mountain page backed by `/api/roadmap`.
+  - `/session/[moduleId]` owns the active module/session chat and always links back to `/roadmap`.
+- The roadmap/session pages call the Python API through `lib/api.ts`. They do not read JSON files directly.
+- The current Next integration is full-turn chat, not token-streaming chat. Each submitted message posts to `/api/chat/message`, the Python backend runs one full turn, and the frontend renders the returned `chat_history`.
+- Web audio is also post-turn, not streaming. After a completed assistant turn, the frontend can request `/api/audio/latest` and play the returned WAV blob. This mirrors the reliable Gradio audio path and avoids streaming-audio complexity in the browser.
+- `components/RoadmapPageClient.tsx` owns the roadmap page fetch cycle: load users, load current roadmap payload, create/switch local profiles, and link the glowing module marker into the session route.
+- `components/SessionPageClient.tsx` owns the session fetch cycle: start the requested module via `/api/session/start`, then send chat turns through `/api/chat/message`.
+- The backend API relies on the existing learner stores (`profile_store.py`, `spaced_review_store.py`, `plan_store.py`, `user_store.py`) so the Gradio app and the Next.js app share the same underlying learner state.
+- `DEBUG_MODEL_INPUT=1` now logs the exact model payloads sent through `run_model_turn`, `call_model`, and the helper LLM calls in `basic_mvp/tools.py`. This is the main way to inspect whether `todays_words`, `used_words`, `learned_words`, or other learner context blocks are actually reaching the model.
+- `basic_mvp/chat_backend.py` intentionally duplicates a small amount of message-building/session orchestration logic from `basic_mvp/app.py` instead of importing the Gradio file directly. This avoids triggering Gradio-specific UI concerns inside the API server.
+- Module sessions are started through `start_module_session(...)` in `basic_mvp/chat_backend.py`. That function loads the active gameplan, selects the requested module, computes `todays_words`, runs `run_module_generator(...)`, and seeds a fresh chat session with the generated scenario.
+- The current roadmap payload returned to the frontend includes `goal_summary`, `best_guess_level`, `time_constraint`, `state_summary`, `gameplan_state`, `spaced_review_state`, and `active_module_id`.
+- The current session payload returned to the frontend includes `phase`, `chat_history`, `scenario`, `goal_summary`, `best_guess_level`, `time_constraint`, `state_summary`, `adjustment_state`, `gameplan_state`, `spaced_review_state`, and `active_module_id`.
+
+## Decisions
+- We use the Responses endpoint via the `OpenAI` client (`client.responses.create`) with `stream=True`.
+- We removed reasoning to reduce latency and simplify the UI.
+- Prompt is read from `basic_mvp/prompts/conversation.md` on each request so edits take effect without restarting the app (prompt behavior can change between turns).
+- Correction behavior is implemented as an LLM-backed tool using `basic_mvp/prompts/correction.md`; this keeps the main chat natural while making correction generation explicit (at the cost of extra latency on correction turns).
+- Onboarding output now includes `time_constraint`; if the real prompt file does not emit it, gameplan generation will see an empty or debug default value.
+- `basic_mvp/prompts/planning.md` controls the one-turn planning question that asks for schedule constraints. It is hot-reloaded like the other prompt files.
+- Difficulty adjustment is no longer handled by separate increase/decrease tools. Instead, the conversation model sees `state_summary` and `adjustment_state` each turn and is expected to adapt difficulty directly from that context.
+- AI-assisted UI change: replaced `ChatInterface` with a small `Blocks` layout to support reliable streaming updates across Gradio versions.
+- `DEBUG_SSE=1` enables terminal logging of each SSE event type so streaming problems can be diagnosed without changing the UI.
+- `DEBUG_DISABLE_STREAMING=1` switches conversation turns to one-shot responses for simpler debugging; this is useful when you want to inspect tool handoffs without SSE noise.
+- Assistant TTS adds a second API call after each assistant turn when enabled. Audio is generated after the text turn finishes; it is not synthesized concurrently with the text model stream.
+- `UI_THROTTLE_SECONDS` and `UI_THROTTLE_CHARS` control how often streaming updates are pushed to the UI.
+- For the first Next.js integration, chat is deliberately non-streaming. This lowers integration risk while the API contract, session persistence, and tool handoffs stabilize.
+- The Python API is a lightweight server boundary, not a rewrite of the tutor logic. The existing Python prompt/tool/state code remains the source of truth, and the Next.js app only consumes it over HTTP.
+- The Next.js frontend is parallel to the Gradio app for now. This keeps the existing learning flow runnable while the web UI is integrated incrementally.
+- The API server is currently expected to run from inside `basic_mvp` because the backend modules still use local imports like `from config import ...` instead of package-relative imports. That is acceptable for now, but it is a packaging constraint to clean up before wider deployment.

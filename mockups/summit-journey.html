@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Summit Journey</title>
+  <style>
+    :root {
+      --cream: #f8f2e7;
+      --sand: #ead8bf;
+      --gold: #e0a33a;
+      --terracotta: #b85632;
+      --wine: #6b1f1f;
+      --forest: #395947;
+      --ink: #241915;
+      --glass: rgba(248, 242, 231, 0.82);
+      --shadow: 0 24px 70px rgba(42, 19, 10, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255, 214, 153, 0.45), transparent 28%),
+        radial-gradient(circle at 80% 18%, rgba(184, 86, 50, 0.28), transparent 22%),
+        linear-gradient(180deg, #fef9f0 0%, #f1dfc3 35%, #d99860 66%, #7b3d2c 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+    }
+
+    .landscape {
+      position: relative;
+      overflow: hidden;
+      padding: 42px 28px 28px 34px;
+    }
+
+    .brand {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 26px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.2rem;
+      text-transform: uppercase;
+    }
+
+    .brand .tag {
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(107, 31, 31, 0.14);
+      border: 1px solid rgba(107, 31, 31, 0.16);
+      font-size: 0.85rem;
+    }
+
+    .hero {
+      max-width: 650px;
+      margin-top: 12px;
+    }
+
+    .hero h2 {
+      margin: 0 0 10px;
+      font-size: clamp(2.6rem, 5vw, 5rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .hero p {
+      max-width: 470px;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin: 0;
+      color: rgba(36, 25, 21, 0.8);
+    }
+
+    .mountain-scene {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .ridge {
+      position: absolute;
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      bottom: 0;
+    }
+
+    .ridge.back {
+      width: 110%;
+      height: 39%;
+      left: -4%;
+      background: linear-gradient(180deg, #8d5143 0%, #5f2d24 100%);
+      opacity: 0.55;
+    }
+
+    .ridge.mid {
+      width: 84%;
+      height: 52%;
+      left: 12%;
+      background: linear-gradient(180deg, #5d4837 0%, #3c2a23 100%);
+      opacity: 0.78;
+    }
+
+    .ridge.front {
+      width: 73%;
+      height: 62%;
+      left: 2%;
+      background: linear-gradient(180deg, #74624f 0%, #2b231f 100%);
+    }
+
+    .sun {
+      position: absolute;
+      right: 17%;
+      top: 15%;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 233, 170, 0.95) 0%, rgba(255, 194, 104, 0.74) 45%, rgba(255, 180, 79, 0.14) 72%, transparent 100%);
+      filter: blur(3px);
+      opacity: 0.92;
+    }
+
+    .path {
+      position: absolute;
+      left: 14%;
+      right: 28%;
+      bottom: 11%;
+      height: 62%;
+      border-left: 10px solid rgba(245, 223, 182, 0.95);
+      border-radius: 140px;
+      transform: skewX(-17deg);
+      filter: drop-shadow(0 0 18px rgba(255, 241, 202, 0.22));
+    }
+
+    .path::before,
+    .path::after {
+      content: "";
+      position: absolute;
+      left: -10px;
+      right: -30px;
+      border-left: 10px solid rgba(245, 223, 182, 0.95);
+      border-radius: 140px;
+    }
+
+    .path::before {
+      top: 18%;
+      bottom: 34%;
+      left: 32%;
+      transform: scaleX(-1);
+    }
+
+    .path::after {
+      top: 54%;
+      bottom: -8%;
+      left: -18%;
+    }
+
+    .checkpoint {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #fff3dd 0%, #e6c68b 100%);
+      border: 4px solid rgba(107, 31, 31, 0.2);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 30px rgba(34, 11, 3, 0.22);
+      pointer-events: auto;
+    }
+
+    .checkpoint span {
+      font-size: 0.82rem;
+      text-align: center;
+      padding: 6px;
+      font-weight: bold;
+      color: var(--wine);
+    }
+
+    .checkpoint.current {
+      background: linear-gradient(180deg, #fff4df 0%, #f3bb54 100%);
+      transform: scale(1.08);
+    }
+
+    .checkpoint.locked {
+      background: linear-gradient(180deg, #d2c5b4 0%, #998b7a 100%);
+      opacity: 0.68;
+    }
+
+    .checkpoint.one { left: 17%; bottom: 16%; }
+    .checkpoint.two { left: 37%; bottom: 28%; }
+    .checkpoint.three { left: 24%; bottom: 44%; }
+    .checkpoint.four { left: 47%; bottom: 57%; }
+    .checkpoint.five { left: 39%; bottom: 74%; }
+
+    .panel {
+      padding: 26px 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(248, 242, 231, 0.32) 100%);
+      backdrop-filter: blur(14px);
+      border-left: 1px solid rgba(255,255,255,0.25);
+      display: flex;
+      align-items: stretch;
+    }
+
+    .workspace {
+      width: 100%;
+      background: var(--glass);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #fffaf0;
+      border: 1px solid rgba(107, 31, 31, 0.12);
+      font-size: 0.9rem;
+    }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+      background: rgba(255,255,255,0.55);
+      padding: 18px;
+      border-radius: 20px;
+    }
+
+    .summary strong {
+      color: var(--wine);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12rem;
+    }
+
+    .chat {
+      background: rgba(255,255,255,0.64);
+      border-radius: 24px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .bubble {
+      max-width: 88%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      line-height: 1.5;
+      font-size: 0.96rem;
+    }
+
+    .bubble.assistant {
+      background: #fff8ec;
+      border: 1px solid rgba(107, 31, 31, 0.1);
+    }
+
+    .bubble.user {
+      justify-self: end;
+      background: linear-gradient(180deg, #b85632 0%, #8d3f23 100%);
+      color: white;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .input {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: none;
+      background: white;
+      box-shadow: inset 0 0 0 1px rgba(107, 31, 31, 0.12);
+      font-size: 1rem;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .ghost {
+      font-size: 0.9rem;
+      color: rgba(36, 25, 21, 0.72);
+    }
+
+    .button {
+      border: none;
+      border-radius: 999px;
+      padding: 14px 22px;
+      background: linear-gradient(180deg, #c85f36 0%, #9f4123 100%);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: bold;
+      box-shadow: 0 14px 30px rgba(159, 65, 35, 0.24);
+      cursor: pointer;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .landscape {
+        min-height: 62vh;
+      }
+
+      .panel {
+        padding-top: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="landscape">
+      <div class="brand">
+        <h1>Camino al Espanol</h1>
+        <div class="tag">Goal: talk with neighbors</div>
+      </div>
+
+      <div class="hero">
+        <h2>Climb toward real Spanish conversations.</h2>
+        <p>
+          Start at the trailhead, build confidence step by step, and see your next roleplay
+          waiting on the mountain path. The active checkpoint is your next module.
+        </p>
+      </div>
+
+      <div class="mountain-scene" aria-hidden="true">
+        <div class="sun"></div>
+        <div class="ridge back"></div>
+        <div class="ridge mid"></div>
+        <div class="ridge front"></div>
+        <div class="path"></div>
+        <div class="checkpoint one"><span>Hola vecino</span></div>
+        <div class="checkpoint two current"><span>Vida diaria</span></div>
+        <div class="checkpoint three"><span>Invitaciones</span></div>
+        <div class="checkpoint four locked"><span>Problemas</span></div>
+        <div class="checkpoint five locked"><span>Confianza</span></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="workspace">
+        <div class="topbar">
+          <div class="pill">Taylor</div>
+          <div class="pill">Assessment Chat</div>
+        </div>
+
+        <div class="summary">
+          <div>
+            <strong>Where You Stand</strong>
+            You can handle short introductions and simple personal details, but longer questions
+            still need simpler wording.
+          </div>
+          <div>
+            <strong>Today's Words</strong>
+            <span>vecino, calle, cocinar, tiempo</span>
+          </div>
+        </div>
+
+        <div class="chat">
+          <div class="bubble assistant">
+            Hola. Soy tu vecina nueva. Vivo en la casa azul. ¿Cuánto tiempo llevas aquí?
+          </div>
+          <div class="bubble user">
+            Vivo aqui sinco months.
+          </div>
+          <div class="bubble assistant">
+            Bien. Llevas cinco meses aquí. ¿Te gusta este barrio?
+          </div>
+        </div>
+
+        <div class="controls">
+          <input class="input" value="Sí, me gusta porque..." />
+          <div class="actions">
+            <div class="ghost">Read replies aloud</div>
+            <button class="button">Continue Roleplay</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>
